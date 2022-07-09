@@ -49,6 +49,8 @@
  CAN_FilterTypeDef canfil; //CAN Bus Filter
  uint32_t canMailbox; //CAN Bus Mail box variable
 
+ int absolute_time = 0;
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -80,7 +82,7 @@ int main(void)
   HAL_Init();
 
   /* USER CODE BEGIN Init */
-
+  absolute_time = HAL_GetTick();
   /* USER CODE END Init */
 
   /* Configure the system clock */
@@ -124,11 +126,14 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+
 	  uint8_t csend[] = {0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08};
 	  HAL_CAN_AddTxMessage(&hcan,&txHeader,csend,&canMailbox);
 	  HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
 	  HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_3);
-	  HAL_Delay(1000);
+	  int next_time = HAL_GetTick();
+	  HAL_Delay(1000 + absolute_time - next_time);
+	  absolute_time = HAL_GetTick();
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
