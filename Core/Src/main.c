@@ -41,6 +41,8 @@
 /* Private variables ---------------------------------------------------------*/
  CAN_HandleTypeDef hcan;
 
+TIM_HandleTypeDef htim2;
+
 /* USER CODE BEGIN PV */
 
  CAN_RxHeaderTypeDef rxHeader; //CAN Bus Transmit Header
@@ -49,7 +51,6 @@
  CAN_FilterTypeDef canfil; //CAN Bus Filter
  uint32_t canMailbox; //CAN Bus Mail box variable
 
- int absolute_time = 0;
 
 /* USER CODE END PV */
 
@@ -57,6 +58,7 @@
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_CAN_Init(void);
+static void MX_TIM2_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -82,7 +84,7 @@ int main(void)
   HAL_Init();
 
   /* USER CODE BEGIN Init */
-  absolute_time = HAL_GetTick();
+
   /* USER CODE END Init */
 
   /* Configure the system clock */
@@ -95,6 +97,7 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_CAN_Init();
+  MX_TIM2_Init();
   /* USER CODE BEGIN 2 */
   canfil.FilterBank = 0;
 	canfil.FilterMode = CAN_FILTERMODE_IDMASK;
@@ -120,20 +123,14 @@ int main(void)
 	HAL_CAN_Start(&hcan);
 	HAL_CAN_ActivateNotification(&hcan,CAN_IT_RX_FIFO0_MSG_PENDING);
 
+	HAL_TIM_Base_Start_IT(&htim2);
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-
-	  uint8_t csend[] = {0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08};
-	  HAL_CAN_AddTxMessage(&hcan,&txHeader,csend,&canMailbox);
-	  HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
-	  HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_3);
-	  int next_time = HAL_GetTick();
-	  HAL_Delay(1000 + absolute_time - next_time);
-	  absolute_time = HAL_GetTick();
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -218,6 +215,51 @@ static void MX_CAN_Init(void)
 }
 
 /**
+  * @brief TIM2 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM2_Init(void)
+{
+
+  /* USER CODE BEGIN TIM2_Init 0 */
+
+  /* USER CODE END TIM2_Init 0 */
+
+  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+
+  /* USER CODE BEGIN TIM2_Init 1 */
+
+  /* USER CODE END TIM2_Init 1 */
+  htim2.Instance = TIM2;
+  htim2.Init.Prescaler = 2000;
+  htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim2.Init.Period = 36000;
+  htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
+  if (HAL_TIM_Base_Init(&htim2) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+  if (HAL_TIM_ConfigClockSource(&htim2, &sClockSourceConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim2, &sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM2_Init 2 */
+
+  /* USER CODE END TIM2_Init 2 */
+
+}
+
+/**
   * @brief GPIO Initialization Function
   * @param None
   * @retval None
@@ -260,6 +302,15 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan1)
 	HAL_CAN_GetRxMessage(hcan1, CAN_RX_FIFO0, &rxHeader, canRX);
 	HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_3);
 
+}
+
+
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim)
+{
+	uint8_t csend[] = {0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08};
+  HAL_CAN_AddTxMessage(&hcan,&txHeader,csend,&canMailbox);
+  HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
+  HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_3);
 }
 
 /* USER CODE END 4 */
